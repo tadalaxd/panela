@@ -5,7 +5,9 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
+const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:uvzMYYiIEPwLHyRmZDDtCxMmALStvtCW@centerbeam.proxy.rlwy.net:42414/railway";
+
+if (!DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
@@ -14,12 +16,14 @@ if (!process.env.DATABASE_URL) {
 console.log("Tentando conectar ao banco de dados...");
 
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: true,
+  connectionString: DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+    requestCert: true
+  },
   connectionTimeoutMillis: 5000,
   max: 20,
-  idleTimeoutMillis: 30000,
-  retryInterval: 500,
+  idleTimeoutMillis: 30000
 });
 
 // Teste de conexão com retry

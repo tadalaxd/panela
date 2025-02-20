@@ -10,10 +10,11 @@ console.log("Configurando Drizzle...");
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
-  driver: 'pg',
+  dialect: "postgresql",
+  driver: "pg",
   dbCredentials: {
     connectionString: process.env.DATABASE_URL
   },
   verbose: true,
   strict: true
-} as Config);
+} satisfies Config);

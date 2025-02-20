@@ -1,9 +1,8 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+// @ts-ignore
+import pkg from 'pg';
+const { Pool } = pkg;
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
 
 const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:uvzMYYiIEPwLHyRmZDDtCxMmALStvtCW@centerbeam.proxy.rlwy.net:42414/railway";
 
@@ -18,12 +17,8 @@ console.log("Tentando conectar ao banco de dados...");
 const pool = new Pool({ 
   connectionString: DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false,
-    requestCert: true
-  },
-  connectionTimeoutMillis: 5000,
-  max: 20,
-  idleTimeoutMillis: 30000
+    rejectUnauthorized: false
+  }
 });
 
 // Teste de conexão com retry

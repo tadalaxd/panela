@@ -1,11 +1,11 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm run build"
+buildCommand = "cd PanelaControl/PanelaControl && npm install && npm run build"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "cd PanelaControl/PanelaControl && npm start"
 healthcheckTimeout = 100
-restartPolicyType = "on-failure"
+restartPolicyType = "always"
 restartPolicyMaxRetries = 10
 
 [variables]

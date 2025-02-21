@@ -1,6 +1,6 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.PGDATABASE) {
   throw new Error("DATABASE_URL, ensure the database is provisioned");
 }
 
@@ -11,13 +11,15 @@ export default defineConfig({
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
-    ssl: true
+    host: process.env.PGHOST!,
+    port: parseInt(process.env.PGPORT!),
+    database: process.env.PGDATABASE!,
+    user: process.env.PGUSER!,
+    password: process.env.PGPASSWORD!,
+    ssl: {
+      rejectUnauthorized: false
+    }
   },
   verbose: true,
-  strict: false, // Desabilitar modo estrito para permitir alterações nas tabelas
-  push: {
-    force: true, // Força a criação das tabelas sem pedir confirmação
-    forceDrop: true // Força a recriação das tabelas se necessário
-  }
+  strict: false
 });

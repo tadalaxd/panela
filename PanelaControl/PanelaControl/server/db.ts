@@ -4,7 +4,7 @@ const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:uvzMYYiIEPwLHyRmZDDtCxMmALStvtCW@centerbeam.proxy.rlwy.net:42414/railway";
+const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   throw new Error(

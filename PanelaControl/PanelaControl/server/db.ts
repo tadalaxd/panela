@@ -20,7 +20,6 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
-// Eventos do pool para monitoramento (Retained from original)
 pool.on('error', (err) => {
   console.error('Erro inesperado no pool de conexões:', err);
 });
@@ -33,7 +32,6 @@ pool.on('remove', () => {
   console.log('Conexão removida do pool');
 });
 
-// Teste inicial de conexão (Improved from edited)
 async function initializeDatabase() {
   let client;
   let retries = 0;
@@ -44,13 +42,13 @@ async function initializeDatabase() {
       console.log(`Tentativa ${retries + 1} de ${maxRetries} de conexão com o banco de dados...`);
       client = await pool.connect();
 
-      // Definir o schema explicitamente (Retained from original)
+      // Garantir que estamos usando o schema público
       await client.query('SET search_path TO public');
 
       const result = await client.query('SELECT NOW()');
       console.log("Conexão estabelecida, timestamp:", result.rows[0].now);
 
-      // Verificar se a tabela existe (Retained from original)
+      // Verificar se a tabela existe
       const tableCheck = await client.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -64,7 +62,7 @@ async function initializeDatabase() {
         throw new Error("Tabela guild_configs não encontrada!");
       }
 
-      // Teste explícito de acesso à tabela (Retained from original)
+      // Tentar acessar a tabela para garantir que temos permissões
       await client.query('SELECT COUNT(*) FROM public.guild_configs');
       console.log("Tabela guild_configs encontrada e acessível.");
 
@@ -89,14 +87,9 @@ async function initializeDatabase() {
   }
 }
 
-// Inicializar o banco de dados antes de exportar (Improved from edited)
-await initializeDatabase().catch(error => {
+initializeDatabase().catch(error => {
   console.error("Erro fatal na inicialização do banco de dados:", error);
   process.exit(1);
 });
 
-// Exportar a instância do Drizzle (Simplified from edited)
-export const db = drizzle(pool, { 
-  schema,
-  defaultSchema: 'public'
-});
+export const db = drizzle(pool, { schema });

@@ -1,14 +1,23 @@
-
 [build]
 builder = "nixpacks"
 buildCommand = "cd PanelaControl/PanelaControl && npm install && npm run build"
 
 [deploy]
-startCommand = "cd PanelaControl/PanelaControl && npm run migrate && npm start"
+startCommand = """
+cd PanelaControl/PanelaControl
+echo "Executando migrações..."
+npm run migrate
+if [ $? -ne 0 ]; then
+  echo "Falha na migração do banco de dados"
+  exit 1
+fi
+echo "Iniciando o bot..."
+npm start
+"""
 healthcheckPath = "/"
 healthcheckTimeout = 100
-restartPolicyType = "always"
-restartPolicyMaxRetries = 10
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 3
 
 [variables]
 NODE_ENV = "production"

@@ -1,39 +1,26 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-console.log("Tentando conectar ao banco de dados...");
+console.log("Iniciando configuração do banco de dados...");
 
-if (!process.env.DATABASE_URL && !process.env.PGDATABASE) {
+if (!process.env.DATABASE_URL) {
   throw new Error(
-    "Nenhuma credencial de banco de dados encontrada. Configure DATABASE_URL ou as variáveis PGHOST, PGPORT, etc.",
+    "DATABASE_URL deve estar configurada. Verifique as variáveis de ambiente.",
   );
 }
 
-const poolConfig = process.env.DATABASE_URL 
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    }
-  : {
-      host: process.env.PGHOST,
-      port: parseInt(process.env.PGPORT || "5432"),
-      database: process.env.PGDATABASE,
-      user: process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      ssl: { rejectUnauthorized: false },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    };
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 
-const pool = new Pool(poolConfig);
-
-// Eventos do pool para monitoramento
+// Eventos do pool para monitoramento (Retained from original)
 pool.on('error', (err) => {
   console.error('Erro inesperado no pool de conexões:', err);
 });
@@ -46,52 +33,70 @@ pool.on('remove', () => {
   console.log('Conexão removida do pool');
 });
 
-// Teste inicial de conexão
+// Teste inicial de conexão (Improved from edited)
 async function initializeDatabase() {
   let client;
-  try {
-    console.log("Testando conexão com o banco de dados...");
-    client = await pool.connect();
+  let retries = 0;
+  const maxRetries = 5;
 
-    // Definir o schema explicitamente
-    await client.query('SET search_path TO public');
+  while (retries < maxRetries) {
+    try {
+      console.log(`Tentativa ${retries + 1} de ${maxRetries} de conexão com o banco de dados...`);
+      client = await pool.connect();
 
-    // Teste básico de conexão
-    const result = await client.query('SELECT NOW()');
-    console.log("Conexão estabelecida, timestamp:", result.rows[0].now);
+      // Definir o schema explicitamente (Retained from original)
+      await client.query('SET search_path TO public');
 
-    // Verificar se a tabela existe
-    const tableCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'guild_configs'
-      );
-    `);
+      const result = await client.query('SELECT NOW()');
+      console.log("Conexão estabelecida, timestamp:", result.rows[0].now);
 
-    if (!tableCheck.rows[0].exists) {
-      throw new Error("Tabela guild_configs não encontrada! Execute 'npm run migrate' primeiro.");
+      // Verificar se a tabela existe (Retained from original)
+      const tableCheck = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = 'guild_configs'
+        );
+      `);
+
+      if (!tableCheck.rows[0].exists) {
+        console.log("Tabela guild_configs não encontrada. Execute 'npm run migrate' primeiro.");
+        throw new Error("Tabela guild_configs não encontrada!");
+      }
+
+      // Teste explícito de acesso à tabela (Retained from original)
+      await client.query('SELECT COUNT(*) FROM public.guild_configs');
+      console.log("Tabela guild_configs encontrada e acessível.");
+
+      console.log("Conexão com o banco de dados estabelecida com sucesso!");
+      return true;
+    } catch (error) {
+      console.error(`Tentativa ${retries + 1} falhou:`, error);
+      retries++;
+
+      if (retries < maxRetries) {
+        console.log(`Aguardando 5 segundos antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      } else {
+        console.error("Todas as tentativas de conexão falharam!");
+        throw error;
+      }
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
-
-    // Teste explícito de acesso à tabela
-    await client.query('SELECT COUNT(*) FROM public.guild_configs');
-    console.log("Tabela guild_configs encontrada e acessível.");
-
-    return true;
-  } catch (error) {
-    console.error("Erro ao inicializar banco de dados:", error);
-    throw error;
-  } finally {
-    if (client) client.release();
   }
 }
 
-// Inicializar o banco de dados antes de exportar
-await initializeDatabase();
+// Inicializar o banco de dados antes de exportar (Improved from edited)
+await initializeDatabase().catch(error => {
+  console.error("Erro fatal na inicialização do banco de dados:", error);
+  process.exit(1);
+});
 
-// Exportar a instância do Drizzle com configurações explícitas
+// Exportar a instância do Drizzle (Simplified from edited)
 export const db = drizzle(pool, { 
   schema,
-  // Configurações adicionais do Drizzle
   defaultSchema: 'public'
 });

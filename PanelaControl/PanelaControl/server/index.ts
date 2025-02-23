@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { startBot } from "./bot";
+import { registerRoutes } from "./routes.js";
+import { setupVite, serveStatic, log } from "./vite.js";
+import { startBot } from "./bot/index.js";
 
 log("Iniciando servidor Express...", "express");
 
@@ -117,7 +117,7 @@ async function main() {
 
     // Configurar ambiente
     log("Configurando ambiente...", "express");
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV !== "production") {
       log("Iniciando em modo desenvolvimento", "express");
       const server = registerRoutes(app);
       await setupVite(app, server);
@@ -127,7 +127,7 @@ async function main() {
     }
 
     // Iniciar o servidor HTTP
-    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+    const PORT = 5000; // Forçar porta 5000
     await startServer(PORT);
 
     // Iniciar o bot do Discord em background

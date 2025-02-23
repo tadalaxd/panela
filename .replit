@@ -46,7 +46,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run build && npm run migrate && NODE_ENV=production node dist/index.js"
+args = "cd PanelaControl/PanelaControl && npm install && npm run build && npm run migrate && NODE_ENV=production node dist/server/index.js"
 waitForPort = 5000
 
 [deployment]

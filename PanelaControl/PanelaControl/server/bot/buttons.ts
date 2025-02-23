@@ -121,7 +121,7 @@ async function toggleRole(
         content: "Use h!panela config primeiro!",
         ephemeral: true
       });
-      setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+      setTimeout(() => reply.delete().catch(() => {}), 60000);
       return;
     }
 
@@ -131,7 +131,7 @@ async function toggleRole(
         content: "Usuário não encontrado no servidor!",
         ephemeral: true
       });
-      setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+      setTimeout(() => reply.delete().catch(() => {}), 60000);
       return;
     }
 
@@ -141,7 +141,7 @@ async function toggleRole(
         content: `Cargo ${roleName} não encontrado!`,
         ephemeral: true
       });
-      setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+      setTimeout(() => reply.delete().catch(() => {}), 60000);
       return;
     }
 
@@ -156,13 +156,28 @@ async function toggleRole(
           content: "Erro ao configurar permissões do cargo us.",
           ephemeral: true
         });
-        setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+        setTimeout(() => reply.delete().catch(() => {}), 60000);
         return;
       }
     }
 
     const hasRole = targetMember.roles.cache.has(roleId);
     const addedByUserId = getMemberAddedBy(config, roleId, targetMember.id);
+
+    // Verificar se o membro já está em alguma panela de outro usuário
+    const panelas = [config.firstLadyRoleId!, config.antiBanRoleId!, config.usRoleId!];
+    for (const panelaId of panelas) {
+      const panelaAddedBy = getMemberAddedBy(config, panelaId, targetMember.id);
+      if (panelaAddedBy && panelaAddedBy !== interaction.user.id) {
+        const panelaRole = await interaction.guild!.roles.fetch(panelaId);
+        const reply = await interaction.followUp({
+          content: `Este membro já está na panela ${panelaRole?.name || 'desconhecida'} de outro usuário!`,
+          ephemeral: true
+        });
+        setTimeout(() => reply.delete().catch(() => {}), 60000);
+        return;
+      }
+    }
 
     if (hasRole) {
       // Só pode remover se foi quem adicionou
@@ -171,7 +186,7 @@ async function toggleRole(
           content: "Você só pode remover membros que você mesmo adicionou!",
           ephemeral: true
         });
-        setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+        setTimeout(() => reply.delete().catch(() => {}), 60000);
         return;
       }
 
@@ -184,7 +199,7 @@ async function toggleRole(
         content: `Cargo ${roleName} removido de ${targetMember}!`,
         ephemeral: true
       });
-      setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+      setTimeout(() => reply.delete().catch(() => {}), 60000);
       log(`Cargo ${roleName} removido do usuário ${targetMember.user.tag} por ${interaction.user.tag}`, "discord");
     } else {
       // Verificar limite individual
@@ -196,7 +211,7 @@ async function toggleRole(
           content: `Você já atingiu o limite de ${roleLimit} membros para o cargo ${roleName}!`,
           ephemeral: true
         });
-        setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+        setTimeout(() => reply.delete().catch(() => {}), 60000);
         return;
       }
 
@@ -209,7 +224,7 @@ async function toggleRole(
         content: `Cargo ${roleName} adicionado para ${targetMember}!`,
         ephemeral: true
       });
-      setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+      setTimeout(() => reply.delete().catch(() => {}), 60000);
       log(`Cargo ${roleName} adicionado ao usuário ${targetMember.user.tag} por ${interaction.user.tag}`, "discord");
     }
   } catch (error) {
@@ -218,7 +233,7 @@ async function toggleRole(
       content: `Erro ao modificar o cargo ${roleName}. Por favor, tente novamente.`,
       ephemeral: true
     });
-    setTimeout(() => reply.delete().catch(() => {}), 60000); // Updated timeout
+    setTimeout(() => reply.delete().catch(() => {}), 60000);
   }
 }
 

@@ -6,13 +6,16 @@ import { startBot } from "./bot";
 log("Iniciando servidor Express...", "express");
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-// Rota de healthcheck
+// Rota de healthcheck - precisa estar disponível imediatamente
 app.get('/', (_req, res) => {
+  log("Healthcheck chamado", "express");
   res.json({ status: 'ok' });
 });
+
+// Configurações básicas
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // Middleware de log
 app.use((req, res, next) => {
@@ -45,17 +48,66 @@ app.use((req, res, next) => {
   next();
 });
 
+// Função para tentar iniciar o servidor com retry
+async function startServer(port: number, retries = 3): Promise<void> {
+  let attempt = 0;
+
+  while (attempt < retries) {
+    try {
+      const server = registerRoutes(app);
+
+      await new Promise<void>((resolve, reject) => {
+        server.on('error', (error: any) => {
+          if (error.code === 'EADDRINUSE') {
+            log(`Porta ${port} em uso, tentativa ${attempt + 1} de ${retries}`, "express");
+            server.close();
+            reject(error);
+          } else {
+            reject(error);
+          }
+        });
+
+        server.listen(port, "0.0.0.0", () => {
+          log(`Servidor rodando em http://0.0.0.0:${port}`, "express");
+          resolve();
+        });
+
+        // Configurar graceful shutdown
+        process.on('SIGTERM', () => {
+          log("Recebido sinal SIGTERM, iniciando shutdown graceful", "express");
+          server.close(() => {
+            log("Servidor HTTP fechado", "express");
+            process.exit(0);
+          });
+        });
+
+        process.on('SIGINT', () => {
+          log("Recebido sinal SIGINT, iniciando shutdown graceful", "express");
+          server.close(() => {
+            log("Servidor HTTP fechado", "express");
+            process.exit(0);
+          });
+        });
+      });
+
+      // Se chegou aqui, o servidor iniciou com sucesso
+      return;
+    } catch (error) {
+      attempt++;
+      if (attempt === retries) {
+        throw error;
+      }
+      // Esperar um pouco antes de tentar novamente
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 // Função principal de inicialização
 async function main() {
   try {
     // Verificar variáveis de ambiente críticas
     log("Verificando variáveis de ambiente...", "express");
-
-    if (!process.env.DISCORD_TOKEN) {
-      log("DISCORD_TOKEN não encontrado!", "express");
-      throw new Error("Token do Discord não encontrado! Configure a variável de ambiente DISCORD_TOKEN.");
-    }
-    log("✓ DISCORD_TOKEN encontrado", "express");
 
     if (!process.env.DATABASE_URL) {
       log("DATABASE_URL não encontrado!", "express");
@@ -63,43 +115,30 @@ async function main() {
     }
     log("✓ DATABASE_URL encontrado", "express");
 
-    log("Registrando rotas...", "express");
-    const server = registerRoutes(app);
-
-    // Handler de erros global
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Erro Interno do Servidor";
-
-      log(`Erro: ${status} - ${message}`, "express");
-      res.status(status).json({ message });
-    });
-
     // Configurar ambiente
     log("Configurando ambiente...", "express");
     if (app.get("env") === "development") {
       log("Iniciando em modo desenvolvimento", "express");
+      const server = registerRoutes(app);
       await setupVite(app, server);
     } else {
       log("Iniciando em modo produção", "express");
       serveStatic(app);
     }
 
-    // Iniciar o bot do Discord
-    log("Iniciando bot do Discord...", "express");
-    try {
-      await startBot();
-      log("Bot do Discord iniciado com sucesso!", "express");
-    } catch (error) {
-      log(`Erro ao iniciar o bot do Discord: ${error}`, "express");
-      throw error;
-    }
-
     // Iniciar o servidor HTTP
-    const PORT = process.env.PORT || 5000;
-    server.listen(Number(PORT), "0.0.0.0", () => {
-      log(`Servidor rodando em http://0.0.0.0:${PORT}`, "express");
-    });
+    const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+    await startServer(PORT);
+
+    // Iniciar o bot do Discord em background
+    if (process.env.DISCORD_TOKEN) {
+      log("Iniciando bot do Discord em background...", "express");
+      startBot().catch(error => {
+        log(`Erro ao iniciar o bot do Discord: ${error}`, "express");
+      });
+    } else {
+      log("DISCORD_TOKEN não encontrado - bot não será iniciado", "express");
+    }
   } catch (error) {
     log(`Erro fatal ao iniciar servidor: ${error}`, "express");
     process.exit(1);

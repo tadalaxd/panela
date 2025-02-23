@@ -3,31 +3,49 @@ const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-if (!process.env.PGDATABASE) {
+console.log("Iniciando configuração do banco de dados...");
+
+// Verificar DATABASE_URL primeiro
+if (!process.env.DATABASE_URL && !process.env.PGDATABASE) {
   throw new Error(
-    "Database credentials not found. Did you forget to provision a database?",
+    "Nenhuma credencial de banco de dados encontrada. Configure DATABASE_URL ou as variáveis PGHOST, PGPORT, etc.",
   );
 }
 
-console.log("Iniciando configuração do banco de dados...");
+let pool: pkg.Pool;
 
-const pool = new Pool({ 
-  host: process.env.PGHOST!,
-  port: parseInt(process.env.PGPORT!),
-  database: process.env.PGDATABASE!,
-  user: process.env.PGUSER!,
-  password: process.env.PGPASSWORD!,
-  ssl: {
-    rejectUnauthorized: false
-  },
-  max: 10, // reduzido para evitar sobrecarga
-  idleTimeoutMillis: 60000, // aumentado para 1 minuto
-  connectionTimeoutMillis: 10000, // aumentado para 10 segundos
-  allowExitOnIdle: true
-});
+if (process.env.DATABASE_URL) {
+  console.log("Usando DATABASE_URL para conexão");
+  pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    max: 10,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true
+  });
+} else {
+  console.log("Usando variáveis PG individuais para conexão");
+  pool = new Pool({ 
+    host: process.env.PGHOST,
+    port: parseInt(process.env.PGPORT || "5432"),
+    database: process.env.PGDATABASE,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    ssl: {
+      rejectUnauthorized: false
+    },
+    max: 10,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true
+  });
+}
 
 // Teste de conexão com retry e backoff exponencial
-const MAX_RETRIES = 10; // Aumentado para 10 tentativas
+const MAX_RETRIES = 10;
 const INITIAL_BACKOFF = 1000; // 1 segundo
 let retries = 0;
 
@@ -37,6 +55,9 @@ async function connectWithRetry() {
   try {
     const client = await pool.connect();
     console.log("Conexão com o banco de dados estabelecida com sucesso");
+    // Teste simples para verificar se podemos executar queries
+    const result = await client.query('SELECT NOW()');
+    console.log("Teste de query executado com sucesso:", result.rows[0]);
     client.release();
     return true;
   } catch (err) {
@@ -63,6 +84,15 @@ pool.on('connect', () => {
 
 pool.on('remove', () => {
   console.log('Conexão removida do pool');
+});
+
+// Verificar credenciais e tentar conexão inicial
+console.log("Credenciais do banco de dados:", {
+  usingDatabaseUrl: !!process.env.DATABASE_URL,
+  host: process.env.PGHOST || 'from DATABASE_URL',
+  database: process.env.PGDATABASE || 'from DATABASE_URL',
+  port: process.env.PGPORT || 'from DATABASE_URL',
+  // Não logar user e password por segurança
 });
 
 connectWithRetry().catch(err => {

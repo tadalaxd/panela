@@ -28,6 +28,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd PanelaControl/PanelaControl && npm run migrate && npm run start"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "cd PanelaControl/PanelaControl && npm run migrate && npm run start"]

@@ -1,16 +1,24 @@
 import { defineConfig } from "drizzle-kit";
 
-if (!process.env.PGDATABASE) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+if (!process.env.DATABASE_URL && !process.env.PGDATABASE) {
+  throw new Error(
+    "Nenhuma credencial de banco de dados encontrada. Configure DATABASE_URL ou as variáveis PGHOST, PGPORT, etc.",
+  );
 }
 
 console.log("Configurando Drizzle...");
 
-export default defineConfig({
-  out: "./migrations",
-  schema: "./shared/schema.ts",
-  dialect: "postgresql",
-  dbCredentials: {
+let config;
+
+if (process.env.DATABASE_URL) {
+  config = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  };
+} else {
+  config = {
     host: process.env.PGHOST!,
     port: parseInt(process.env.PGPORT!),
     database: process.env.PGDATABASE!,
@@ -19,7 +27,14 @@ export default defineConfig({
     ssl: {
       rejectUnauthorized: false
     }
-  },
+  };
+}
+
+export default defineConfig({
+  out: "./migrations",
+  schema: "./shared/schema.ts",
+  dialect: "postgresql",
+  dbCredentials: config,
   verbose: true,
   strict: false
 });

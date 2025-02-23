@@ -11,7 +11,7 @@ export const guildConfigs = pgTable("guild_configs", {
   roleLimits: text("role_limits").array(), // ["roleId:limit", "roleId:limit"]
   allowedRoles: text("allowed_roles").array(),
   usAllowedRoles: text("us_allowed_roles").array(),
-  memberAddedBy: json("member_added_by").$type<Record<string, Record<string, Record<string, string>>>>(), // { "roleId": { "addedById": { "memberId": "timestamp" } } }
+  memberAddedBy: json("member_added_by").$type<Record<string, Record<string, Record<string, string>>>>().default({}), // { "roleId": { "addedById": { "memberId": "timestamp" } } }
 });
 
 export const insertGuildConfigSchema = createInsertSchema(guildConfigs).pick({

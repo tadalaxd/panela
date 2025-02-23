@@ -1,4 +1,4 @@
-import pg from "pg";
+import { Pool } from 'pg';
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
 import { sql } from "drizzle-orm";
@@ -11,7 +11,7 @@ if (!process.env.DATABASE_URL && !process.env.PGDATABASE) {
   );
 }
 
-const pool = new pg.Pool({
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
@@ -102,6 +102,13 @@ async function main() {
     process.exit(0);
   } catch (error) {
     console.error("Erro durante a migração:", error);
+    if (error instanceof Error) {
+      console.error("Detalhes do erro:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
     process.exit(1);
   } finally {
     if (client) {

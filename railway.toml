@@ -1,17 +1,11 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd PanelaControl/PanelaControl && npm install && npm run build"
+buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "cd PanelaControl/PanelaControl && node dist/index.js"
-healthcheckPath = "/"
-healthcheckTimeout = 300
+startCommand = "npm run migrate && NODE_ENV=production node dist/index.js"
 restartPolicy = "on-failure"
-maxRestarts = 5
+maxRestarts = 3
 
 [variables]
 NODE_ENV = "production"
-PORT = "5000"
-
-[migrations]
-command = "cd PanelaControl/PanelaControl && npm run migrate"
